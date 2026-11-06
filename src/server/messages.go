@@ -571,6 +571,20 @@ func (s *Server) SendMessage(ctx context.Context, req *__.MessageRequest) (*__.M
 		}
 	}
 
+	// GOWS does not set MessageContextInfo.MessageSecret, so recipients cannot
+	// react to text, audio and video messages sent from here (whatsmeow#509).
+	// Add a random 32-byte secret unless the message does not need one.
+	if message != nil &&
+		jid.Server != types.NewsletterServer &&
+		message.ReactionMessage == nil &&
+		message.PollUpdateMessage == nil &&
+		message.GetMessageContextInfo().GetMessageSecret() == nil {
+		if message.MessageContextInfo == nil {
+			message.MessageContextInfo = &waE2E.MessageContextInfo{}
+		}
+		message.MessageContextInfo.MessageSecret = random.Bytes(32)
+	}
+
 	res, err := cli.SendMessage(ctx, jid, message, extra)
 	if err != nil {
 		return nil, err
